@@ -1,81 +1,105 @@
-# Paste your COMPLETE final Flask code below this line
-
-from flask import Flask, request, render_template_string
+from flask import Flask, request, jsonify
 import pickle
 import pandas as pd
-import smtplib
-from email.mime.text import MIMEText
 import os
 
-# Load model
+# ============================
+# LOAD MODEL
+# ============================
+
 model = pickle.load(open("ids_model.pkl", "rb"))
 model_columns = pickle.load(open("model_columns.pkl", "rb"))
 
 app = Flask(__name__)
+
+# ============================
+# GLOBAL SECURITY STATE
+# ============================
 
 blocked_ips = set()
 login_attempts = {}
 attack_counter = 0
 attack_logs = []
 
-def send_email_alert(message):
-    pass  # Optional
+# ============================
+# IDS + IPS API ENDPOINT
+# ============================
 
-login_page = """
-<h2>🔐 Secure Login Portal</h2>
-<form method="POST">
-Username:<br><input type="text" name="username"><br><br>
-Password:<br><input type="password" name="password"><br><br>
-<input type="submit" value="Login">
-</form>
-<a href="/dashboard">Dashboard</a>
-"""
-
-@app.route("/", methods=["GET", "POST"])
-def login():
+@app.route("/api/login", methods=["POST"])
+def api_login():
     global attack_counter
+
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
 
     ip = request.remote_addr
 
+    # IPS: Block check
     if ip in blocked_ips:
-        return "<h3>🚫 Access Denied - IP Blocked</h3>"
+        return jsonify({
+            "status": "blocked",
+            "reason": "IP blocked by IPS"
+        }), 403
 
-    if request.method == "POST":
-        if ip not in login_attempts:
-            login_attempts[ip] = 0
+    # Track brute force
+    if ip not in login_attempts:
+        login_attempts[ip] = 0
 
-        login_attempts[ip] += 1
+    login_attempts[ip] += 1
 
-        if login_attempts[ip] > 5:
-            blocked_ips.add(ip)
-            attack_counter += 1
-            attack_logs.append(f"Brute Force detected from {ip}")
-            return "<h3>🚨 Brute Force Detected! IP Blocked.</h3>"
+    if login_attempts[ip] > 5:
+        blocked_ips.add(ip)
+        attack_counter += 1
+        attack_logs.append(f"Brute force detected from {ip}")
 
-        sample = pd.DataFrame([{col: 0 for col in model_columns}])
-        prediction = model.predict(sample)[0]
+        return jsonify({
+            "status": "blocked",
+            "reason": "Brute force detected"
+        }), 403
 
-        if prediction == 1:
-            blocked_ips.add(ip)
-            attack_counter += 1
-            attack_logs.append(f"ML Attack detected from {ip}")
-            return "<h3>🚨 ML Attack Detected! IP Blocked.</h3>"
+    # Simulated normal login validation
+    if username == "admin" and password == "admin123":
+        login_attempts[ip] = 0
+        return jsonify({
+            "status": "success",
+            "message": "Login successful"
+        })
 
-        return "<h3>✅ Login Successful</h3>"
+    # Wrong credentials → count but don't block immediately
+    return jsonify({
+        "status": "failed",
+        "message": "Invalid credentials"
+    }), 401
 
-    return render_template_string(login_page)
 
-@app.route("/dashboard")
-def dashboard():
-    return f"""
-    <h2>🛡 Dashboard</h2>
-    <p>Total Attacks: {attack_counter}</p>
-    <p>Blocked IPs: {list(blocked_ips)}</p>
-    <ul>
-    {''.join([f"<li>{log}</li>" for log in attack_logs])}
-    </ul>
-    <a href="/">Back</a>
-    """
+# ============================
+# DASHBOARD API
+# ============================
+
+@app.route("/api/dashboard", methods=["GET"])
+def api_dashboard():
+    return jsonify({
+        "total_attacks": attack_counter,
+        "blocked_ips": list(blocked_ips),
+        "attack_logs": attack_logs
+    })
+
+
+# ============================
+# HEALTH CHECK
+# ============================
+
+@app.route("/")
+def home():
+    return jsonify({
+        "message": "IDS + IPS Backend Running"
+    })
+
+
+# ============================
+# RUN SERVER
+# ============================
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
