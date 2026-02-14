@@ -1,0 +1,2 @@
+# ML-Driven-Intrusion-Detection-Prevention-System-IDS-IPS-for-Web-Applications
+A Machine Learning-based Intrusion Detection and Prevention System (IDS + IPS) designed to secure web applications in real-time. The system detects brute force attacks and malicious traffic using a trained NSL-KDD model and automatically blocks suspicious IP addresses while maintaining live attack logs and analytics dashboard.
