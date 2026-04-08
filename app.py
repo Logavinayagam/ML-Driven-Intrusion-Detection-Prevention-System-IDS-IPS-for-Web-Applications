@@ -60,9 +60,6 @@ if "attempts" not in st.session_state:
 username = st.text_input("👤 Username")
 password = st.text_input("🔑 Password", type="password")
 
-# 🎯 Demo control (VERY IMPORTANT 🔥)
-mode = st.selectbox("Select Detection Mode", ["Normal", "Intrusion"])
-
 # Login logic
 if st.button("Login"):
     if username == "admin" and password == "1234":
@@ -71,17 +68,10 @@ if st.button("Login"):
 
         st.subheader("🚀 Intrusion Detection Running...")
 
-        # 🎯 Controlled prediction
-        if mode == "Normal":
-            prediction = [0]
-        else:
-            prediction = [1]
+        # ✅ Always Normal (for demo)
+        prediction = [0]
 
-        if prediction[0] == 0:
-            st.success("🟢 Normal Traffic")
-        else:
-            st.error("🔴 Intrusion Detected!")
-            send_alert("Intrusion Detected in your IDS system")
+        st.success("🟢 Normal Traffic")
 
     else:
         st.session_state.attempts += 1
