@@ -1,5 +1,5 @@
-flask
-gunicorn
-pandas
+streamlit
 scikit-learn
-xgboost
+numpy
+joblib
+pandas
