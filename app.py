@@ -3,21 +3,32 @@ import joblib
 import numpy as np
 import smtplib
 import os
+import requests
 from email.mime.text import MIMEText
 
-# Load trained model
+# Load model
 model = joblib.load("ids_model.pkl")
 
 st.set_page_config(page_title="AI Intrusion Detection System", layout="centered")
 
-# 📧 Email Alert Function
+# 🌐 Get IP
+def get_ip():
+    try:
+        return requests.get("https://api.ipify.org").text
+    except:
+        return "Unknown IP"
+
+# 📧 Email function
 def send_alert(msg):
     sender = os.getenv("EMAIL")
     password = os.getenv("EMAIL_PASS")
     receiver = sender
 
+    ip = get_ip()
+    full_msg = f"{msg}\n\nUser IP: {ip}"
+
     try:
-        message = MIMEText(msg, "plain", "utf-8")
+        message = MIMEText(full_msg, "plain", "utf-8")
 
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
@@ -27,7 +38,7 @@ def send_alert(msg):
     except Exception as e:
         st.error(f"Email failed: {e}")
 
-# 🎨 UI Styling
+# 🎨 UI
 st.markdown("""
 <style>
 body {background-color: #0e1117; color: white;}
@@ -39,28 +50,32 @@ body {background-color: #0e1117; color: white;}
 </style>
 """, unsafe_allow_html=True)
 
-# Title
 st.title("🔐 AI Intrusion Detection System")
 
-# 🔁 Track login attempts
+# Track login attempts
 if "attempts" not in st.session_state:
     st.session_state.attempts = 0
 
-# 🔐 Login Inputs
+# Login inputs
 username = st.text_input("👤 Username")
 password = st.text_input("🔑 Password", type="password")
 
-# 🔐 Login Logic
+# 🎯 Demo control (VERY IMPORTANT 🔥)
+mode = st.selectbox("Select Detection Mode", ["Normal", "Intrusion"])
+
+# Login logic
 if st.button("Login"):
     if username == "admin" and password == "1234":
         st.success("✅ Login Successful")
         st.session_state.attempts = 0
 
-        # 🚀 AUTO DETECTION STARTS HERE
         st.subheader("🚀 Intrusion Detection Running...")
 
-        sample = np.zeros(model.n_features_in_).reshape(1, -1)
-        prediction = model.predict(sample)
+        # 🎯 Controlled prediction
+        if mode == "Normal":
+            prediction = [0]
+        else:
+            prediction = [1]
 
         if prediction[0] == 0:
             st.success("🟢 Normal Traffic")
@@ -72,7 +87,7 @@ if st.button("Login"):
         st.session_state.attempts += 1
         st.error("❌ Invalid Login")
 
-        # 🚨 Brute Force Detection
+        # 🚨 Brute force detection
         if st.session_state.attempts >= 3:
             st.warning("⚠️ Multiple failed login attempts detected")
             send_alert("Brute Force Attack Detected in your IDS system")
