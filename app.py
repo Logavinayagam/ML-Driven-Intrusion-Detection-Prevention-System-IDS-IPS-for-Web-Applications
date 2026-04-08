@@ -1,11 +1,30 @@
 import streamlit as st
 import joblib
 import numpy as np
+import smtplib
+import os
 
+# Load model
 model = joblib.load("ids_model.pkl")
 
-st.set_page_config(page_title="Intrusion Detection", layout="centered")
+st.set_page_config(page_title="AI Intrusion Detection System", layout="centered")
 
+# 🔐 Email function (secure)
+def send_alert(msg):
+    sender = os.getenv("EMAIL")
+    password = os.getenv("EMAIL_PASS")
+    receiver = sender
+
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender, password)
+        server.sendmail(sender, receiver, msg)
+        server.quit()
+    except Exception as e:
+        st.error(f"Email failed: {e}")
+
+# 🎨 UI
 st.markdown("""
 <style>
 body {background-color: #0e1117; color: white;}
@@ -19,29 +38,37 @@ body {background-color: #0e1117; color: white;}
 
 st.title("🔐 AI Intrusion Detection System")
 
+# 🔁 Track login attempts
+if "attempts" not in st.session_state:
+    st.session_state.attempts = 0
+
+# 🔐 Login
 username = st.text_input("👤 Username")
 password = st.text_input("🔑 Password", type="password")
 
 if st.button("Login"):
     if username == "admin" and password == "1234":
         st.success("✅ Login Successful")
+        st.session_state.attempts = 0
 
-        st.subheader("📡 Enter Network Features")
+        st.subheader("🚀 Run Intrusion Detection")
 
-        inputs = []
-        num_features = model.n_features_in_
-
-        for i in range(num_features):
-            val = st.number_input(f"Feature {i+1}", value=0.0)
-            inputs.append(val)
-
-        if st.button("🚀 Detect Intrusion"):
-            prediction = model.predict([inputs])
+        # 🔥 Use sample input (clean UI)
+        if st.button("Detect Intrusion"):
+            sample = np.zeros(model.n_features_in_).reshape(1, -1)
+            prediction = model.predict(sample)
 
             if prediction[0] == 0:
                 st.success("🟢 Normal Traffic")
             else:
                 st.error("🔴 Intrusion Detected!")
+                send_alert("🚨 Intrusion Detected in your IDS system!")
 
     else:
+        st.session_state.attempts += 1
         st.error("❌ Invalid Login")
+
+        # 🚨 Brute force detection
+        if st.session_state.attempts >= 3:
+            st.warning("⚠️ Multiple failed login attempts!")
+            send_alert("🚨 Brute Force Attack Detected in your IDS system!")
