@@ -10,7 +10,7 @@ model = joblib.load("ids_model.pkl")
 
 st.set_page_config(page_title="AI Intrusion Detection System", layout="centered")
 
-# 📧 Email Alert Function (UTF-8 safe)
+# 📧 Email Alert Function
 def send_alert(msg):
     sender = os.getenv("EMAIL")
     password = os.getenv("EMAIL_PASS")
@@ -56,18 +56,17 @@ if st.button("Login"):
         st.success("✅ Login Successful")
         st.session_state.attempts = 0
 
-        st.subheader("🚀 Run Intrusion Detection")
+        # 🚀 AUTO DETECTION STARTS HERE
+        st.subheader("🚀 Intrusion Detection Running...")
 
-        # 🔍 Detection Button
-        if st.button("Detect Intrusion"):
-            sample = np.zeros(model.n_features_in_).reshape(1, -1)
-            prediction = model.predict(sample)
+        sample = np.zeros(model.n_features_in_).reshape(1, -1)
+        prediction = model.predict(sample)
 
-            if prediction[0] == 0:
-                st.success("🟢 Normal Traffic")
-            else:
-                st.error("🔴 Intrusion Detected!")
-                send_alert("Intrusion Detected in your IDS system")
+        if prediction[0] == 0:
+            st.success("🟢 Normal Traffic")
+        else:
+            st.error("🔴 Intrusion Detected!")
+            send_alert("Intrusion Detected in your IDS system")
 
     else:
         st.session_state.attempts += 1
